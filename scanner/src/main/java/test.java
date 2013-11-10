@@ -1,3 +1,4 @@
+import model.Const;
 import model.FileAttributes;
 import net.sf.json.JSONObject;
 import org.apache.commons.collections.bidimap.AbstractDualBidiMap;
@@ -15,9 +16,12 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.net.URLDecoder;
+import java.net.URLEncoder;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.attribute.UserDefinedFileAttributeView;
 import java.util.*;
@@ -30,137 +34,88 @@ import java.util.*;
  * To change this template use File | Settings | File Templates.
  */
 public class test {
+    private static String ROOTPATH = "e:\\test";
+    private static String UPLOAD_ROOTPATH = "/apps/krdsgtest";
+
     public static void main (String [] arg){
-        //upload();
-        scanFile();
+        execute();
     }
 
-    private static void upload(Properties properties,File file,FileAttributes fileAttributes) {
-        String uploadUrl = "https://c.pcs.baidu.com/rest/2.0/pcs/file?method=upload&path=%2fapps%2fkrdsgtest%2faa%2f11.txt&ondup=overwrite&access_token=3.87a69104e73a85199d56d2bb47ea19cf.2592000.1386170961.1094572425-1647498";
-        //获取当前用户空间配额信息
-        String getAvailableSpaceUrl = "https://pcs.baidu.com/rest/2.0/pcs/quota?method=info&access_token=3.4c5c0866c55dd98453849b3cc75f6105.2592000.1385982460.1094572425-238347";
-//        String getAccessTokenUrl = "https://pcs.baidu.com/rest/2.0/pcs/file?method=upload&path=%2fapps%2falbum%2f1.JPG&access_token=b778fb598c717c0ad7ea8c97c8f3a46f";
-        HttpClient httpClient = new HttpClient();
-        PostMethod postMethod = new PostMethod(uploadUrl);
-//        GetMethod postMethod = new GetMethod(getAvailableSpaceUrl);
-        String flagLock = "";
-        try {
-            //post提交的参数
-            Part[] parts = {new FilePart(file.getName(),file)};
-            //设置多媒体参数，作用类似form表单中的enctype="multipart/form-data"
-            postMethod.setRequestEntity(new MultipartRequestEntity(parts, postMethod.getParams()));
-            httpClient.executeMethod(postMethod);
-            if (postMethod.getStatusCode() == HttpStatus.SC_OK) {
-                flagLock = postMethod.getResponseBodyAsString();
-                String fileId = JSONObject.fromObject(flagLock).getString("fs_id");
-                String netDiskPath = JSONObject.fromObject(flagLock).getString("path");
-                fileAttributes.setFileId(fileId);
-                fileAttributes.setNetDiskPath(netDiskPath);
-                UserDefinedFileAttributeView userDefinedFileAttributeView = Files.getFileAttributeView(file.toPath(),
-                        UserDefinedFileAttributeView.class);
-                userDefinedFileAttributeView.write("fileId", Charset.defaultCharset().encode(fileId));
-                fileAttributes.setLastModified(file.lastModified());
-                try{
-                    String fileAttrs = "";
-                    fileAttrs = new ObjectMapper().writeValueAsString(fileAttributes);
-                    properties.setProperty(fileAttributes.getFileId(),fileAttrs);
-                }catch (Exception e){
-                    e.printStackTrace();
-                }
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        } finally {
-            postMethod.releaseConnection();
-        }
-    }
-
-    private static void scanFile(){
-        List<FileAttributes> filelist = new ArrayList<FileAttributes>();
-        refreshFileList(filelist,"e:\\test");
-
+    private static void execute(){
+        //扫描当前文件情况
+        List<FileAttributes> nowfileslist = new ArrayList<FileAttributes>();
+        scanNowFiles(nowfileslist,ROOTPATH);
+        //获取前一次记录的文件情况
         Properties prop = new Properties();// 属性集合对象
-        File fileProperties = new File("e:\\test\\prop.properties");
-        Set<String> fileIdSet = prop.stringPropertyNames();
-        Map<String,FileAttributes> propFileAttributesMap = new HashMap<String, FileAttributes>();
-        for(String fileId:fileIdSet){
-            propFileAttributesMap.put(fileId, (FileAttributes) prop.get(fileId));
-        }
+        Map<String,FileAttributes> oldFilesMap = new HashMap<String, FileAttributes>();
+        queryOldFiles(prop,oldFilesMap,"prop.properties");
 
-        try{
-            if(!fileProperties.exists()){
-                fileProperties.createNewFile();
+        sync(prop, nowfileslist, oldFilesMap);
+
+        saveProperties(prop);
+    }
+
+    //对比处理
+    private static void sync(Properties prop,List<FileAttributes> nowfileslist, Map<String, FileAttributes> oldFilesMap) {
+        for(FileAttributes fileAttributes :nowfileslist){
+            //正在上传中的文件不管
+            if(Const.UploadStatus.Uploading.toString().equals(fileAttributes.getUploadStatus())){
+                continue;
             }
-            FileInputStream fis = new FileInputStream("e:\\test\\prop.properties");// 属性文件输入流
-            prop.load(fis);// 将属性文件流装载到Properties对象中
-            fis.close();// 关闭流
-        }catch (Exception e){
-            e.printStackTrace();
-        }
 
-
-        //是否有新文件或者文件更新
-        for(FileAttributes fileAttributes :filelist){
             File file = new File(fileAttributes.getName());
             Path path = file.toPath();
 
-            if(StringUtils.isEmpty(fileAttributes.getFileId())){
+            FileAttributes propFileAttributes = oldFilesMap.get(fileAttributes.getName());
+            if(propFileAttributes == null){
                 //上传
                 System.out.println("文件" + fileAttributes.getName() + "需要上传");
                 upload(prop, file, fileAttributes);
             }else {
-                if(!file.exists()){
-                    continue;
-                }else {
-                    FileAttributes propFileAttributes = propFileAttributesMap.get(fileAttributes.getFileId());
-                    if(!(fileAttributes.getLastModified()).equals(propFileAttributes.getLastModified())){
-                        if(!fileAttributes.getName().equals(propFileAttributes.getName())){
-                            if(fileAttributes.getSize().equals(propFileAttributes.getSize())){
-                                //重命名
-                                System.out.println("文件" + propFileAttributes.getName() + "需要重命名为:" + fileAttributes.getName());
-                            }else {
-                                //删除旧文件
-                                delete();
-                                //上传新文件
-                                upload(prop,file,fileAttributes);
-                            }
-                        }
-                        //更新
-                        System.out.println("文件" + filePath + "需要更新");
-                        //删除旧文件
-                        delete();
-                        //上传新文件
-                        upload(prop, file, fileAttributes);
-                    }
+                if(!(fileAttributes.getLastModified()).equals(propFileAttributes.getLastModified())){
+                    //更新
+                    System.out.println("文件" + propFileAttributes.getName() + "需要更新");
+                    //上传文件
+                    upload(prop, file, fileAttributes);
                 }
             }
         }
 
         //是否有删除文件
-        for(FileAttributes fileAttributes: filelist){
-            propFileAttributesMap.remove(fileAttributes.getFileId());
+        for(FileAttributes fileAttributes: nowfileslist){
+            oldFilesMap.remove(fileAttributes.getName());
         }
-        Set<String> needDeleteFileIdSet = propFileAttributesMap.keySet();
-        for(String fileId:needDeleteFileIdSet){
+        Set<String> needDeleteFileNameSet = oldFilesMap.keySet();
+        for(String fileName:needDeleteFileNameSet){
             //删除
-            System.out.println("文件" + propFileAttributesMap.get(fileId).getName() + "需要删除");
+            System.out.println("文件" + oldFilesMap.get(fileName).getName() + "需要删除");
             //delete
-            delete();
-            prop.remove(fileId);
+            delete(prop,oldFilesMap.get(fileName));
         }
+    }
 
-        try {
-            // 文件输出流
-            FileOutputStream fos = new FileOutputStream("e:\\test\\prop.properties");
-            // 将Properties集合保存到流中
-            prop.store(fos, "ohyeah");
-            fos.close();// 关闭流
-        } catch (Exception e){
+    //扫描前一次文件情况
+    private static void queryOldFiles(Properties prop,Map<String, FileAttributes> oldFilesMap, String propfileName) {
+        File fileProperties = new File(propfileName);
+        try{
+            if(!fileProperties.exists()){
+                fileProperties.createNewFile();
+            }
+            FileInputStream fis = new FileInputStream(propfileName);// 属性文件输入流
+            prop.load(fis);// 将属性文件流装载到Properties对象中
+            Set<String> fileNameSet = prop.stringPropertyNames();
+            for(String fileName:fileNameSet){
+                FileAttributes fileAttributes = new ObjectMapper().readValue((String)prop.get(fileName),FileAttributes.class);
+                oldFilesMap.put(fileName,fileAttributes);
+            }
+            fis.close();// 关闭流
+        }catch (Exception e){
             e.printStackTrace();
         }
-
     }
-    public static void refreshFileList(List<FileAttributes> filelist,String strPath) {
+
+    //扫描当前文件
+    public static void scanNowFiles(List<FileAttributes> filelist,String strPath) {
         File dir = new File(strPath);
         File[] files = dir.listFiles();
 
@@ -168,7 +123,7 @@ public class test {
             return;
         for (int i = 0; i < files.length; i++) {
             if (files[i].isDirectory()) {
-                refreshFileList(filelist,files[i].getAbsolutePath());
+                scanNowFiles(filelist, files[i].getAbsolutePath());
             } else {
                 String strFileName = files[i].getAbsolutePath().toLowerCase();
                 System.out.println("---"+strFileName);
@@ -180,31 +135,114 @@ public class test {
                 UserDefinedFileAttributeView userDefinedFileAttributeView = Files.getFileAttributeView(files[i].toPath(),
                         UserDefinedFileAttributeView.class);
                 try {
-                    int size = userDefinedFileAttributeView.size("fileId");
-                    if(size == 0){
-                        fileAttributes.setFileId("-1");
-                    }else {
-                        ByteBuffer bb = ByteBuffer.allocateDirect(size);
-                        userDefinedFileAttributeView.read("fileId", bb);
-                        bb.flip();
-                        fileAttributes.setFileId(Charset.defaultCharset().decode(bb).toString());
-                    }
-
-                    size = userDefinedFileAttributeView.size("netDiskType");
-                    if(size == 0){
-                        fileAttributes.setNetDiskType("-1");
-                    }else {
-                        ByteBuffer bb = ByteBuffer.allocateDirect(size);
-                        userDefinedFileAttributeView.read("netDiskType", bb);
-                        bb.flip();
-                        fileAttributes.setNetDiskType(Charset.defaultCharset().decode(bb).toString());
-                    }
-                } catch (IOException e) {
+                    int size = userDefinedFileAttributeView.size("uploadStatus");
+                    ByteBuffer bb = ByteBuffer.allocateDirect(size);
+                    userDefinedFileAttributeView.read("uploadStatus", bb);
+                    bb.flip();
+                    fileAttributes.setUploadStatus(Charset.defaultCharset().decode(bb).toString());
+                }catch (NoSuchFileException e){
+                    fileAttributes.setUploadStatus(Const.UploadStatus.WaitToUpload.toString());
+                }catch (IOException e) {
                     e.printStackTrace();
                 }
 
                 filelist.add(fileAttributes);
             }
         }
+    }
+
+    private static void saveProperties(Properties prop) {
+        try {
+            // 文件输出流
+            FileOutputStream fos = new FileOutputStream("prop.properties");
+            // 将Properties集合保存到流中
+            prop.store(fos, "ohyeah");
+            fos.close();// 关闭流
+        } catch (Exception e){
+            e.printStackTrace();
+        }
+    }
+
+    //上传文件
+    private static void upload(Properties properties,File file,FileAttributes fileAttributes) {
+        updateFileUploadStatus(file, Const.UploadStatus.Uploading.toString());
+        String uploadUrl = "https://c.pcs.baidu.com/rest/2.0/pcs/file?method=upload&ondup=overwrite&access_token=3.87a69104e73a85199d56d2bb47ea19cf.2592000.1386170961.1094572425-1647498&path=#path#";
+        String fileName = fileAttributes.getName();
+        fileName = fileName.substring(ROOTPATH.length()).replaceAll("\\\\","/");
+        try{
+            uploadUrl = uploadUrl.replace("#path#",URLEncoder.encode(UPLOAD_ROOTPATH + fileName, "UTF-8"));
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+        HttpClient httpClient = new HttpClient();
+        PostMethod postMethod = new PostMethod(uploadUrl);
+        String rtnJsonStr = "";
+        try {
+            if(!file.exists()){
+                return;
+            }
+            //post提交的参数
+            Part[] parts = {new FilePart(file.getName(),file)};
+            //设置多媒体参数，作用类似form表单中的enctype="multipart/form-data"
+            postMethod.setRequestEntity(new MultipartRequestEntity(parts, postMethod.getParams()));
+            httpClient.executeMethod(postMethod);
+            if (postMethod.getStatusCode() == HttpStatus.SC_OK) {
+                rtnJsonStr = postMethod.getResponseBodyAsString();
+                String netDiskPath = JSONObject.fromObject(rtnJsonStr).getString("path");
+                fileAttributes.setNetDiskPath(netDiskPath);
+                fileAttributes.setNetDiskType("0");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            postMethod.releaseConnection();
+        }
+
+        try{
+            updateFileUploadStatus(file,Const.UploadStatus.UploadFinish.toString());
+            fileAttributes.setLastModified(file.lastModified());
+            String fileAttrs = new ObjectMapper().writeValueAsString(fileAttributes);
+            properties.setProperty(fileAttributes.getName(),fileAttrs);
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+    }
+
+    private static void delete(Properties properties,FileAttributes fileAttributes) {
+        String deleteUrl = "https://c.pcs.baidu.com/rest/2.0/pcs/file?method=delete&access_token=3.87a69104e73a85199d56d2bb47ea19cf.2592000.1386170961.1094572425-1647498&path=#path#";
+        String fileName = fileAttributes.getName();
+        fileName = fileName.substring(ROOTPATH.length()).replaceAll("\\\\","/");
+        try{
+            deleteUrl = deleteUrl.replace("#path#",URLEncoder.encode(UPLOAD_ROOTPATH + fileName, "UTF-8"));
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+        HttpClient httpClient = new HttpClient();
+        PostMethod postMethod = new PostMethod(deleteUrl);
+        try {
+            httpClient.executeMethod(postMethod);
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            postMethod.releaseConnection();
+        }
+
+        properties.remove(fileAttributes.getName());
+    }
+
+    /**
+     * 设置文件上传状态
+     * @param file
+     * @param uploadStatus
+     */
+    private static void updateFileUploadStatus(File file,String uploadStatus) {
+        UserDefinedFileAttributeView userDefinedFileAttributeView = Files.getFileAttributeView(file.toPath(),
+                UserDefinedFileAttributeView.class);
+        try {
+            userDefinedFileAttributeView.write("uploadStatus", Charset.defaultCharset().encode(uploadStatus));
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+
     }
 }

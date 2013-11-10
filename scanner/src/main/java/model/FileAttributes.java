@@ -14,6 +14,7 @@ public class FileAttributes {
     private String netDiskType; //网盘类型
     private Long size; //文件大小
     private String netDiskPath; //网盘路径
+    private String uploadStatus;  //文件上传状态
 
     public String getName() {
         return name;
@@ -61,5 +62,13 @@ public class FileAttributes {
 
     public void setNetDiskPath(String netDiskPath) {
         this.netDiskPath = netDiskPath;
+    }
+
+    public String getUploadStatus() {
+        return uploadStatus;
+    }
+
+    public void setUploadStatus(String uploadStatus) {
+        this.uploadStatus = uploadStatus;
     }
 }

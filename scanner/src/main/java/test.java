@@ -1,28 +1,23 @@
 import model.Const;
 import model.FileAttributes;
 import net.sf.json.JSONObject;
-import org.apache.commons.collections.bidimap.AbstractDualBidiMap;
-import org.apache.commons.collections.map.AbstractHashedMap;
 import org.apache.commons.httpclient.HttpClient;
 import org.apache.commons.httpclient.HttpStatus;
 import org.apache.commons.httpclient.methods.PostMethod;
 import org.apache.commons.httpclient.methods.multipart.FilePart;
 import org.apache.commons.httpclient.methods.multipart.MultipartRequestEntity;
 import org.apache.commons.httpclient.methods.multipart.Part;
-import org.apache.commons.lang.StringUtils;
 import org.codehaus.jackson.map.ObjectMapper;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
-import java.nio.file.Path;
 import java.nio.file.attribute.UserDefinedFileAttributeView;
 import java.util.*;
 
@@ -56,15 +51,14 @@ public class test {
     }
 
     //对比处理
-    private static void sync(Properties prop,List<FileAttributes> nowfileslist, Map<String, FileAttributes> oldFilesMap) {
-        for(FileAttributes fileAttributes :nowfileslist){
+    private static void sync(Properties prop,List<FileAttributes> nowFilesList, Map<String, FileAttributes> oldFilesMap) {
+        for(FileAttributes fileAttributes :nowFilesList){
             //正在上传中的文件不管
             if(Const.UploadStatus.Uploading.toString().equals(fileAttributes.getUploadStatus())){
                 continue;
             }
 
             File file = new File(fileAttributes.getName());
-            Path path = file.toPath();
 
             FileAttributes propFileAttributes = oldFilesMap.get(fileAttributes.getName());
             if(propFileAttributes == null){
@@ -82,7 +76,7 @@ public class test {
         }
 
         //是否有删除文件
-        for(FileAttributes fileAttributes: nowfileslist){
+        for(FileAttributes fileAttributes: nowFilesList){
             oldFilesMap.remove(fileAttributes.getName());
         }
         Set<String> needDeleteFileNameSet = oldFilesMap.keySet();
@@ -121,18 +115,18 @@ public class test {
 
         if (files == null)
             return;
-        for (int i = 0; i < files.length; i++) {
-            if (files[i].isDirectory()) {
-                scanNowFiles(filelist, files[i].getAbsolutePath());
+        for (File file:files) {
+            if (file.isDirectory()) {
+                scanNowFiles(filelist, file.getAbsolutePath());
             } else {
-                String strFileName = files[i].getAbsolutePath().toLowerCase();
+                String strFileName = file.getAbsolutePath().toLowerCase();
                 System.out.println("---"+strFileName);
                 FileAttributes fileAttributes = new FileAttributes();
-                fileAttributes.setName(files[i].getAbsolutePath());
-                fileAttributes.setLastModified(files[i].lastModified());
-                fileAttributes.setSize(files[i].length());
+                fileAttributes.setName(file.getAbsolutePath());
+                fileAttributes.setLastModified(file.lastModified());
+                fileAttributes.setSize(file.length());
 
-                UserDefinedFileAttributeView userDefinedFileAttributeView = Files.getFileAttributeView(files[i].toPath(),
+                UserDefinedFileAttributeView userDefinedFileAttributeView = Files.getFileAttributeView(file.toPath(),
                         UserDefinedFileAttributeView.class);
                 try {
                     int size = userDefinedFileAttributeView.size("uploadStatus");
@@ -176,7 +170,6 @@ public class test {
         }
         HttpClient httpClient = new HttpClient();
         PostMethod postMethod = new PostMethod(uploadUrl);
-        String rtnJsonStr = "";
         try {
             if(!file.exists()){
                 return;
@@ -187,7 +180,7 @@ public class test {
             postMethod.setRequestEntity(new MultipartRequestEntity(parts, postMethod.getParams()));
             httpClient.executeMethod(postMethod);
             if (postMethod.getStatusCode() == HttpStatus.SC_OK) {
-                rtnJsonStr = postMethod.getResponseBodyAsString();
+                String rtnJsonStr = postMethod.getResponseBodyAsString();
                 String netDiskPath = JSONObject.fromObject(rtnJsonStr).getString("path");
                 fileAttributes.setNetDiskPath(netDiskPath);
                 fileAttributes.setNetDiskType("0");
@@ -232,8 +225,8 @@ public class test {
 
     /**
      * 设置文件上传状态
-     * @param file
-     * @param uploadStatus
+     * @param file 具体文件
+     * @param uploadStatus 上传状态
      */
     private static void updateFileUploadStatus(File file,String uploadStatus) {
         UserDefinedFileAttributeView userDefinedFileAttributeView = Files.getFileAttributeView(file.toPath(),

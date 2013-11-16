@@ -1,5 +1,5 @@
-import model.Const;
-import model.FileAttributes;
+import com.kongrui.model.Const;
+import com.kongrui.model.FileAttributes;
 import net.sf.json.JSONObject;
 import org.apache.commons.httpclient.HttpClient;
 import org.apache.commons.httpclient.HttpStatus;

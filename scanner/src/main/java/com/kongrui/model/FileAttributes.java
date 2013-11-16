@@ -1,4 +1,4 @@
-package model;
+package com.kongrui.model;
 
 /**
  * Created with IntelliJ IDEA.

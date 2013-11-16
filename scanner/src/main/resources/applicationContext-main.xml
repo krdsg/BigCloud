@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:task="http://www.springframework.org/schema/task"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+			http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd
+			http://www.springframework.org/schema/task http://www.springframework.org/schema/task/spring-task-3.0.xsd"
+       default-autowire="byName" default-lazy-init="false">
+
+    <context:component-scan base-package="com.kongrui" />
+
+    <!--任务以及异步-->
+    <task:annotation-driven executor="myExecutor" scheduler="myScheduler"/>
+
+    <!-- 配置默认的异步任务线程池 和 默认的调度器池 -->
+    <task:scheduler id="myScheduler" pool-size="5"/>
+    <task:executor id="myExecutor" keep-alive="3" pool-size="8"/>
+
+    <bean id="jobScheduler"
+          class="org.springframework.scheduling.quartz.SchedulerFactoryBean">
+        <property name="triggers">
+            <list>
+                <ref bean="scannerTrigger" />
+            </list>
+        </property>
+    </bean>
+
+    <bean id="scanner" class="com.kongrui.scanner.Scanner" />
+    <bean id="scannerJobDetail" class="org.springframework.scheduling.quartz.MethodInvokingJobDetailFactoryBean">
+        <property name="targetObject" ref="scanner" />
+        <property name="targetMethod" value="execute" />
+        <property name="concurrent" value="false"></property>
+    </bean>
+    <bean id="scannerTrigger" class="org.springframework.scheduling.quartz.SimpleTriggerBean">
+        <property name="jobDetail" ref="scannerJobDetail"></property>
+        <property name="startDelay" value="0" />
+        <property name="repeatInterval" value="60000" />
+    </bean>
+
+</beans>

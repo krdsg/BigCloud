@@ -3,7 +3,6 @@ package com.kongrui.scanner;
 import com.kongrui.model.Const;
 import com.kongrui.model.FileAttributes;
 import com.kongrui.model.FtpUtil;
-import com.sjtu.bigcloud.Icon;
 import javafx.util.converter.DateStringConverter;
 import net.sf.json.JSONObject;
 import org.apache.commons.httpclient.HttpClient;
@@ -21,10 +20,7 @@ import org.apache.commons.net.ftp.FTPClient;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.net.URLEncoder;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
@@ -46,8 +42,26 @@ public class Scanner {
     private static String FTP_ROOTPATH = "/bigCloud";
 
     public static void main (String [] arg){
-        new ClassPathXmlApplicationContext("applicationContext-main.xml");
-        //execute();
+        File file = new File(ROOTPATH + "\\desktop.ini");
+//        File file = new File(ROOTPATH + "\\11.txt");
+        FileWriter fileWriter = null;
+        try {
+            fileWriter = new FileWriter(file.getPath());
+            String str = "sdfasdfasdfasdfasdf";
+            fileWriter.write(str);
+        }catch (Exception e){
+            e.printStackTrace();
+        } finally {
+            if (fileWriter != null) {
+                try {
+                    fileWriter.close();
+                }catch (Exception e){
+                    e.printStackTrace();
+                }
+            }
+
+        }
+
     }
 
     public void execute(){
@@ -393,9 +407,9 @@ public class Scanner {
     private void updateFileUploadStatus(File file,String uploadStatus) {
         try{
             if(Const.UploadStatus.Uploading.toString().equals(uploadStatus)){
-                Icon.changeIcon(Icon.UPDATING, "E:\\test");
+                Icon.changeIcon(Icon.UPDATING, file.getPath().substring(0,file.getPath().lastIndexOf("\\")));
             }else if(Const.UploadStatus.UploadFinish.toString().equals(uploadStatus)){
-                Icon.changeIcon(Icon.UPDATE_SUCCESS, "E:\\test");
+                Icon.changeIcon(Icon.UPDATE_SUCCESS, file.getPath().substring(0,file.getPath().lastIndexOf("\\")));
             }
         }catch (Exception e){
             e.printStackTrace();

@@ -1,10 +1,8 @@
-package com.kongrui.model;
+package com.kongrui.util;
 
 import java.io.*;
-import java.net.SocketException;
 import java.util.TimeZone;
 
-import org.apache.commons.lang.StringUtils;
 import org.apache.commons.net.ftp.*;
 import org.apache.log4j.Logger;
 

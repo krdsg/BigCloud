@@ -24,7 +24,7 @@ import java.util.Properties;
 public class DeleteUtil {
 
     public static void delete(Properties properties,FileAttributes fileAttributes,String netDiskType){
-        String queryUrl = "http://victorjin.duapp.com/query.php?f=#fileName#";
+        String queryUrl = "http://victorjin.duapp.com/query.php?a=delete&f=#fileName#";
         try{
             String fileName = fileAttributes.getName();
             fileName = fileName.substring(Const.ROOTPATH.length() + 1).replaceAll("\\\\","/");

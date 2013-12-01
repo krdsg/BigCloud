@@ -71,4 +71,21 @@ public class FileAttributes {
     public void setUploadStatus(String uploadStatus) {
         this.uploadStatus = uploadStatus;
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        FileAttributes that = (FileAttributes) o;
+
+        if (!name.equals(that.name)) return false;
+
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        return name.hashCode();
+    }
 }

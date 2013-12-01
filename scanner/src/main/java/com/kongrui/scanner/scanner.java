@@ -67,28 +67,27 @@ public class Scanner {
 
     public void execute(){
         //扫描当前文件情况
-        List<FileAttributes> nowfileslist = new ArrayList<FileAttributes>();
+        Set<FileAttributes> nowfileslist = new HashSet<FileAttributes>();
         scanNowFiles(nowfileslist,Const.ROOTPATH);
         //获取前一次记录的文件情况
         Properties prop = new Properties();// 属性集合对象
         Map<String,FileAttributes> oldFilesMap = new HashMap<String, FileAttributes>();
 
-
         File fileProperties = new File(Const.PROPERTIES_FILENAME);
         if(!fileProperties.exists()){
-            if(!fileProperties.exists()){
-                try {
-                    fileProperties.createNewFile();
-                } catch (Exception e){
-                    e.printStackTrace();
-                }
+            try {
+                fileProperties.createNewFile();
+            } catch (Exception e){
+                e.printStackTrace();
             }
 
             if(nowfileslist.isEmpty()){
                 DownloadUtil.initDownloadAllFiles(prop);
+                saveProperties(prop);
             }
         }
 
+        scanNowFiles(nowfileslist,Const.ROOTPATH);
         queryOldFiles(prop,oldFilesMap,Const.PROPERTIES_FILENAME);
 
         sync(prop, nowfileslist, oldFilesMap);
@@ -97,7 +96,7 @@ public class Scanner {
     }
 
     //对比处理
-    private void sync(Properties prop,List<FileAttributes> nowFilesList, Map<String, FileAttributes> oldFilesMap) {
+    private void sync(Properties prop,Set<FileAttributes> nowFilesList, Map<String, FileAttributes> oldFilesMap) {
         for(FileAttributes fileAttributes :nowFilesList){
             if(fileAttributes.getName() != null && fileAttributes.getName().contains("\\desktop.ini")){
                 continue;
@@ -135,6 +134,54 @@ public class Scanner {
             //delete
             DeleteUtil.delete(prop, oldFilesMap.get(fileName), oldFilesMap.get(fileName).getNetDiskType());
         }
+
+        updateFileUploadStatus(Const.ROOTPATH);
+    }
+
+    private void updateFileUploadStatus(String path) {
+        Boolean updateFinished = true;
+        File dir = new File(path);
+        File[] files = dir.listFiles();
+        for(File file:files){
+            if(file.isDirectory()){
+                updateFileUploadStatus(file.getAbsolutePath());
+            }else if(!file.getAbsolutePath().contains("\\desktop.ini")){
+                String strFileName = file.getAbsolutePath().toLowerCase();
+
+                UserDefinedFileAttributeView userDefinedFileAttributeView = Files.getFileAttributeView(file.toPath(),
+                        UserDefinedFileAttributeView.class);
+                try {
+                    int size = userDefinedFileAttributeView.size("uploadStatus");
+                    ByteBuffer bb = ByteBuffer.allocateDirect(size);
+                    userDefinedFileAttributeView.read("uploadStatus", bb);
+                    bb.flip();
+                    if(Const.UploadStatus.Uploading.toString().equals(Charset.defaultCharset().decode(bb).toString())){
+                        updateFinished = false;
+                        break;
+                    }
+                }catch (Exception e) {
+                    updateFinished = false;
+                    e.printStackTrace();
+                }
+            }
+        }
+
+        try {
+            String dirPath = dir.getAbsolutePath();
+            if(dirPath.endsWith("\\")){
+                dirPath = dirPath.substring(0,dirPath.lastIndexOf("\\"));
+            }
+
+            if(!updateFinished){
+                Icon.changeIcon(Icon.UPDATING, dirPath);
+            }else{
+                Icon.changeIcon(Icon.UPDATE_SUCCESS, dirPath);
+            }
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+
+
     }
 
     //扫描前一次文件情况
@@ -154,7 +201,7 @@ public class Scanner {
     }
 
     //扫描当前文件
-    public void scanNowFiles(List<FileAttributes> filelist,String strPath) {
+    public void scanNowFiles(Set<FileAttributes> filelist,String strPath) {
         File dir = new File(strPath);
         File[] files = dir.listFiles();
 

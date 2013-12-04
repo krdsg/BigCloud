@@ -1,17 +1,17 @@
 Manifest-Version: 1.0
-Class-Path: commons-beanutils-1.8.0.jar jackson-core-2.1.1.jar spring-
- jdbc-3.1.1.RELEASE.jar aspectjweaver-1.7.0.jar junit-3.8.1.jar log4j-
- 1.2.17.jar spring-expression-3.1.1.RELEASE.jar json-lib-2.4-jdk15.jar
-  slf4j-api-1.6.0.jar spring-asm-3.1.1.RELEASE.jar spring-core-3.1.1.R
- ELEASE.jar jta-1.1.jar spring-aop-3.1.1.RELEASE.jar commons-logging-1
- .0.3.jar commons-codec-1.2.jar aspectjrt-1.7.1.jar ezmorph-1.0.6.jar 
- commons-net-3.3.jar commons-lang-2.5.jar spring-test-3.1.1.RELEASE.ja
- r icon.jar spring-beans-3.1.1.RELEASE.jar commons-httpclient-3.0.1.ja
- r spring-orm-3.1.1.RELEASE.jar spring-tx-3.1.1.RELEASE.jar jackson-co
- re-asl-1.9.9.jar spring-aspects-3.1.1.RELEASE.jar jackson-mapper-asl-
- 1.9.9.jar aopalliance-1.0.jar geronimo-servlet_2.5_spec-1.2.jar quart
- z-1.8.4.jar spring-context-3.1.1.RELEASE.jar spring-web-3.1.1.RELEASE
- .jar commons-collections-3.2.1.jar spring-context-support-3.1.1.RELEA
- SE.jar
+Class-Path: spring-tx-3.1.1.RELEASE.jar spring-test-3.1.1.RELEASE.jar 
+ spring-aspects-3.1.1.RELEASE.jar jackson-mapper-asl-1.9.9.jar junit-3
+ .8.1.jar commons-net-3.3.jar spring-context-support-3.1.1.RELEASE.jar
+  quartz-1.8.4.jar jackson-core-asl-1.9.9.jar log4j-1.2.17.jar slf4j-a
+ pi-1.6.0.jar spring-expression-3.1.1.RELEASE.jar spring-aop-3.1.1.REL
+ EASE.jar spring-jdbc-3.1.1.RELEASE.jar spring-asm-3.1.1.RELEASE.jar e
+ zmorph-1.0.6.jar spring-core-3.1.1.RELEASE.jar commons-httpclient-3.0
+ .1.jar spring-beans-3.1.1.RELEASE.jar commons-codec-1.2.jar jackson-c
+ ore-2.1.1.jar aopalliance-1.0.jar commons-collections-3.2.1.jar dbank
+ -sdk-0.4.1.jar commons-beanutils-1.8.0.jar spring-orm-3.1.1.RELEASE.j
+ ar json-lib-2.4-jdk15.jar spring-web-3.1.1.RELEASE.jar jta-1.1.jar co
+ mmons-lang-2.5.jar geronimo-servlet_2.5_spec-1.2.jar spring-context-3
+ .1.1.RELEASE.jar icon.jar commons-logging-1.0.3.jar VDiskAPIDemo.jar 
+ aspectjrt-1.7.1.jar aspectjweaver-1.7.0.jar
 Main-Class: com.kongrui.MainClass
 

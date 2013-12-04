@@ -2,17 +2,22 @@ package com.kongrui.util;
 
 import com.kongrui.model.Const;
 import com.kongrui.model.FileAttributes;
+import net.sf.json.JSONArray;
 import net.sf.json.JSONObject;
 import org.apache.commons.httpclient.HttpClient;
 import org.apache.commons.httpclient.HttpStatus;
+import org.apache.commons.httpclient.NameValuePair;
 import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.commons.httpclient.methods.PostMethod;
+import org.apache.commons.httpclient.params.HttpMethodParams;
 import org.apache.commons.net.ftp.FTPClient;
 import org.apache.commons.net.ftp.FTPReply;
 
 import java.io.IOException;
 import java.net.URLEncoder;
+import java.util.Iterator;
 import java.util.Properties;
+import java.util.Set;
 
 /**
  * Created with IntelliJ IDEA.
@@ -46,7 +51,12 @@ public class DeleteUtil {
                 String id = JSONObject.fromObject(rtnJsonStr).getString("id");
                 String param = JSONObject.fromObject(rtnJsonStr).getString("param");
                 if("https".equals(protocol)){
-                    httpDelete(properties, fileAttributes, uploadUrl + "?" + param);
+                    if("2".equals(id)){
+                        httpDeleteNormal(properties, fileAttributes, uploadUrl, param);
+                    }else {
+                        httpDelete(properties, fileAttributes, uploadUrl + "?" + param);
+                    }
+
                 }else if("ftp".equals(protocol)){
                     ftpDelete(properties, fileAttributes, uploadUrl);
                 }
@@ -105,5 +115,30 @@ public class DeleteUtil {
         }
 
         properties.remove(fileAttributes.getName());
+    }
+
+    private static void httpDeleteNormal(Properties properties, FileAttributes fileAttributes, String deleteUrl, String params) {
+//        String deleteUrl = "https://c.pcs.baidu.com/rest/2.0/pcs/file?method=delete&access_token=3.87a69104e73a85199d56d2bb47ea19cf.2592000.1386170961.1094572425-1647498&path=#path#";
+        HttpClient httpClient = new HttpClient();
+        PostMethod postMethod = new PostMethod(deleteUrl);
+        postMethod.getParams().setParameter(HttpMethodParams.HTTP_CONTENT_CHARSET, "utf-8");
+        try {
+            for(String str:params.split("&")){
+                String key = str.split("=")[0];
+                String value = str.split("=")[1];
+                postMethod.getParams().setParameter(key,value);
+            }
+            httpClient.executeMethod(postMethod);
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            postMethod.releaseConnection();
+        }
+
+        properties.remove(fileAttributes.getName());
+    }
+
+    public static void main(String[] arg){
+        httpDeleteNormal(null,null,"https://api.weipan.cn/2/fileops/delete","root=sandbox&path=/ee - 副本 (7).txt&access_token=058a216652nedmw3m2yLeOOwqA2141e2");
     }
 }

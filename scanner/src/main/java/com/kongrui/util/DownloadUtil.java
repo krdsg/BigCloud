@@ -145,11 +145,22 @@ public class DownloadUtil {
 
     private static void httpDownloadFile(Properties properties,String needDownloadPath, String netDiskType) {
         HttpClient httpClient = new HttpClient();
-        String downloadUrl = diskUrlMap.get(netDiskType).get("downloadUrl") + "?";
 //        String downloadUrl = "https://pcs.baidu.com/rest/2.0/pcs/file?method=download&path=%2Fapps%2Fkrdsgtest%2FHydrangeas.jpg&access_token=3.87a69104e73a85199d56d2bb47ea19cf.2592000.1386170961.1094572425-1647498";
 //        String downloadUrl = "https://api.weipan.cn/2/files/sandbox/aaa/ddd.txt?&access_token=5636216662nedmw1cyF3n29onGk21605";
+        String downloadUrl = diskUrlMap.get(netDiskType).get("downloadUrl");
+
         try {
-            downloadUrl += diskUrlMap.get(netDiskType).get("downloadParam").replace("#path#",URLEncoder.encode(needDownloadPath,"utf-8"));
+            downloadUrl = downloadUrl.replace("#path#",URLEncoder.encode(needDownloadPath,"UTF-8"));
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+
+        if(downloadUrl.endsWith("/")){
+            downloadUrl = downloadUrl.substring(0,downloadUrl.lastIndexOf("/"));
+        }
+
+        try {
+            downloadUrl += "?" + diskUrlMap.get(netDiskType).get("downloadParam").replace("#path#",URLEncoder.encode(needDownloadPath,"utf-8"));
         }catch (Exception e){
             e.printStackTrace();
         }
@@ -187,11 +198,11 @@ public class DownloadUtil {
                 fileAttributes.setUploadStatus("1");
                 fileAttributes.setName(localPath.getAbsolutePath());
                 fileAttributes.setNetDiskPath(needDownloadPath);
-                File currentFile = new File(localPath.getAbsolutePath());
-                fileAttributes.setLastModified(currentFile.lastModified());
-                fileAttributes.setSize(currentFile.length());
-
                 UploadUtil.updateFileUploadStatus(localPath,Const.UploadStatus.UploadFinish.toString());
+
+                File currentFile = new File(localPath.getAbsolutePath());
+                fileAttributes.setSize(currentFile.length());
+                fileAttributes.setLastModified(currentFile.lastModified());
 
                 try{
                     String fileAttrs = new ObjectMapper().writeValueAsString(fileAttributes);
@@ -251,7 +262,7 @@ public class DownloadUtil {
         try {
             String fileName = new File(remoteDirectory).getName();
             localDirectoryPath = localDirectoryPath + fileName + "\\";
-            File localDirectoryDir = new File(localDirectoryPath);
+            File localDirectoryDir = new File(localDirectoryPath.replaceFirst("\\\\myBigCloud",""));
             if(!localDirectoryDir.exists()){
                 localDirectoryDir.mkdirs();
             }
@@ -293,7 +304,7 @@ public class DownloadUtil {
 
     public static boolean ftpDownloadFile(FTPClient ftpClient,String remoteFileName, String localDires,
                                 String remoteDownLoadPath,String netDiskType,Properties properties) {
-        String strFilePath = localDires + remoteFileName;
+        String strFilePath = localDires.replaceFirst("\\\\myBigCloud","") + remoteFileName;
         BufferedOutputStream outStream = null;
         boolean success = false;
         try {
@@ -301,30 +312,30 @@ public class DownloadUtil {
             outStream = new BufferedOutputStream(new FileOutputStream(
                     strFilePath));
             logger.info(remoteFileName + "开始下载....");
-            success = ftpClient.retrieveFile(remoteFileName, outStream);
-            if (success == true) {
-                logger.info(remoteFileName + "成功下载到" + strFilePath);
+            ftpClient.retrieveFile(remoteFileName, outStream);
 
-                FileAttributes fileAttributes = new FileAttributes();
-                fileAttributes.setNetDiskType(netDiskType);
-                fileAttributes.setUploadStatus("1");
-                fileAttributes.setName(strFilePath);
-                fileAttributes.setNetDiskPath(remoteDownLoadPath);
-                File currentFile = new File(strFilePath);
-                fileAttributes.setLastModified(currentFile.lastModified());
-                fileAttributes.setSize(currentFile.length());
+            logger.info(remoteFileName + "成功下载到" + strFilePath);
 
-                try{
-                    String fileAttrs = new ObjectMapper().writeValueAsString(fileAttributes);
-                    properties.setProperty(fileAttributes.getName(),fileAttrs);
-                }catch (Exception e){
-                    e.printStackTrace();
-                }
+            FileAttributes fileAttributes = new FileAttributes();
+            fileAttributes.setNetDiskType(netDiskType);
+            fileAttributes.setUploadStatus("1");
+            fileAttributes.setName(strFilePath);
+            fileAttributes.setNetDiskPath(remoteDownLoadPath);
 
-                UploadUtil.updateFileUploadStatus(new File(strFilePath),Const.UploadStatus.UploadFinish.toString());
+            UploadUtil.updateFileUploadStatus(new File(strFilePath),Const.UploadStatus.UploadFinish.toString());
 
-                return success;
+            File currentFile = new File(strFilePath);
+            fileAttributes.setLastModified(currentFile.lastModified());
+            fileAttributes.setSize(currentFile.length());
+
+            try{
+                String fileAttrs = new ObjectMapper().writeValueAsString(fileAttributes);
+                properties.setProperty(fileAttributes.getName(),fileAttrs);
+            }catch (Exception e){
+                e.printStackTrace();
             }
+
+            return success;
         } catch (Exception e) {
             e.printStackTrace();
             logger.error(remoteFileName + "下载失败");
@@ -337,9 +348,6 @@ public class DownloadUtil {
                     e.printStackTrace();
                 }
             }
-        }
-        if (success == false) {
-            logger.error(remoteFileName + "下载失败!!!");
         }
         return success;
     }

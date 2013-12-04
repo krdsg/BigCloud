@@ -5,27 +5,10 @@ import com.kongrui.model.FileAttributes;
 import com.kongrui.util.DeleteUtil;
 import com.kongrui.util.DownloadUtil;
 import com.kongrui.util.UploadUtil;
-import net.sf.json.JSONObject;
-import nsp.NSPClient;
-import nsp.VFS;
-import nsp.VFSExt;
-import org.apache.commons.httpclient.HttpClient;
-import org.apache.commons.httpclient.HttpStatus;
-import org.apache.commons.httpclient.NameValuePair;
-import org.apache.commons.httpclient.methods.GetMethod;
-import org.apache.commons.httpclient.methods.PostMethod;
-import org.apache.commons.httpclient.methods.multipart.FilePart;
-import org.apache.commons.httpclient.methods.multipart.MultipartRequestEntity;
-import org.apache.commons.httpclient.methods.multipart.Part;
-import org.apache.commons.httpclient.params.HttpMethodParams;
 import org.apache.commons.lang.time.DateUtils;
-import org.apache.commons.net.ftp.FTPClient;
-import org.apache.commons.net.ftp.FTPReply;
 import org.codehaus.jackson.map.ObjectMapper;
-import org.springframework.scheduling.annotation.Async;
 
 import java.io.*;
-import java.net.URLEncoder;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
@@ -84,6 +67,7 @@ public class Scanner {
             if(nowfileslist.isEmpty()){
                 DownloadUtil.initDownloadAllFiles(prop);
                 saveProperties(prop);
+                return;
             }
         }
 
@@ -109,7 +93,7 @@ public class Scanner {
             File file = new File(fileAttributes.getName());
 
             FileAttributes propFileAttributes = oldFilesMap.get(fileAttributes.getName());
-            if(propFileAttributes == null || propFileAttributes.getNetDiskType() == null || "-1".equals(propFileAttributes.getNetDiskType())){
+            if(propFileAttributes == null || propFileAttributes.getNetDiskType() == null){
                 //上传
                 System.out.println("文件" + fileAttributes.getName() + "需要上传");
                 UploadUtil.upload(prop, file, fileAttributes, "-1");
